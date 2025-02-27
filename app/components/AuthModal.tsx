@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { FaTimes, FaUser, FaEnvelope, FaLock, FaGift } from 'react-icons/fa';
+import { supabase, createUser, getUserByEmail } from '@/lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -26,24 +27,69 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     referralCode: '',
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    // В реальном приложении здесь будет API-запрос
-    // Сейчас просто имитируем успешную авторизацию
-    const mockUserData: UserData = {
-      id: Math.random().toString(36).substr(2, 9),
-      username: formData.username,
-      email: formData.email,
-      referralCode: Math.random().toString(36).substr(2, 8).toUpperCase(),
-      referredBy: formData.referralCode || undefined,
-      bonusPoints: 0,
-    };
+    try {
+      if (isLogin) {
+        // Вход
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
 
-    onSuccess(mockUserData);
-    onClose();
+        if (signInError) throw signInError;
+
+        const user = await getUserByEmail(formData.email);
+        if (!user) throw new Error('Пользователь не найден');
+
+        onSuccess({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          referralCode: user.referral_code || '',
+          bonusPoints: user.bonus_points || 0,
+        });
+      } else {
+        // Регистрация
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (signUpError) throw signUpError;
+
+        // Создаем запись в таблице users
+        const newUser = await createUser({
+          id: authData.user?.id,
+          username: formData.username,
+          email: formData.email,
+          referral_code: Math.random().toString(36).substr(2, 8).toUpperCase(),
+          bonus_points: 0,
+        });
+
+        if (!newUser) throw new Error('Ошибка при создании пользователя');
+
+        onSuccess({
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          referralCode: newUser.referral_code || '',
+          bonusPoints: newUser.bonus_points || 0,
+        });
+      }
+
+      onClose();
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(err.message || 'Произошла ошибка при авторизации');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -107,6 +153,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-primary/50"
                   required
+                  minLength={6}
                 />
               </div>
 
@@ -132,15 +179,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
               <button
                 type="submit"
-                className="w-full py-3 px-6 bg-primary text-white hover:bg-secondary rounded-lg transition-all font-medium"
+                disabled={isLoading}
+                className={`w-full py-3 px-6 bg-primary text-white hover:bg-secondary rounded-lg transition-all font-medium ${
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
-                {isLogin ? 'Войти' : 'Зарегистрироваться'}
+                {isLoading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
               </button>
             </form>
 
             <div className="mt-4 text-center">
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
+                }}
                 className="text-primary hover:text-secondary font-medium"
               >
                 {isLogin ? 'Создать аккаунт' : 'Уже есть аккаунт? Войти'}
