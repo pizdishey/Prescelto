@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin', 'cyrillic'] })
 
 export const metadata: Metadata = {
-  title: 'ShinshRat - Minecraft Utility Mod',
-  description: 'Продвинутый утилитный мод для Minecraft с возможностями удаленного доступа',
+  title: 'Prescelto - the best utility mod',
+  description: 'Самый лучший утилитный чит-клиент с гибкой настройкой на Майнкрафт',
 }
 
 export default function RootLayout({
