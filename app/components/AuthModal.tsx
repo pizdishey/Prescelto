@@ -124,7 +124,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg focus:ring-2 focus:ring-primary/50"
-                  required
+                  required={!isLogin}
                 />
               </div>
 
@@ -180,7 +180,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-3 px-6 bg-primary text-white hover:bg-secondary rounded-lg transition-all font-medium ${
+                className={`w-full py-3 px-6 bg-primary hover:bg-secondary text-white rounded-lg transition-all font-medium ${
                   isLoading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
